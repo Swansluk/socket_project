@@ -62,10 +62,12 @@ if __name__ == "__main__":
             else:
                 print("Invalid command format. Use: end <game-identifier>")
 
-        elif user_input == "de-register":
+        elif user_input.startswith("de-register"):
             parts = user_input.split()
-            if len(parts) == 2:
-                send_command(tracker_ip, tracker_port, f'de-register {parts[1]}')
+            if len(parts) == 2:  # Make sure player name is provided
+                player_name = parts[1]
+                print(f"De-registering player {player_name}")  # Debugging line
+                send_command(tracker_ip, tracker_port, f'de-register {player_name}')
             else:
                 print("Invalid command format. Use: de-register <player>")
 
