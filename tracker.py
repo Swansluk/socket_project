@@ -7,7 +7,7 @@ players = {}  # Dictionary to store registered players (name -> (IPv4, t-port, p
 games = {}  # Dictionary to store ongoing games (game_id -> (dealer, players, #holes))
 
 
-# Register player command: `register player IPv4 t-port p-port`
+# Register player
 def tracker_register(player_name, player_ipv4, t_port, p_port):
     if player_name not in players:
         # Register player in tracker
@@ -26,7 +26,7 @@ def tracker_query_players():
         return "0 players registered."
 
 
-# Start game command: `start game player n #holes`
+# Start game
 def tracker_start_game(player_name, n, holes=9):
     print("work in progress")
 
