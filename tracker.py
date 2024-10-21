@@ -6,6 +6,63 @@ import random
 players = {}  # Dictionary to store registered players (name -> (IPv4, t-port, p-port, state))
 games = {}  # Dictionary to store ongoing games (game_id -> (dealer, players, #holes))
 
+def make_socket_non_blocking(sock):
+    fcntl.fcntl(sock, fcntl.F_SETFL, os.O_NONBLOCK)
+    return sock
+
+# Broadcast message to all players in the game
+def broadcast_to_players(game_id, message):
+    game = games[game_id]
+    for player in game['players']:
+        player_ip, player_p_port = players[player][0], int(players[player][2])  # Get player's IPv4 and p-port
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(message.encode(), (player_ip, player_p_port))
+        sock.close()
+def check_game_status(player_name):
+    """
+    Check if the player is involved in an active game.
+    """
+    for game_id, game_info in games.items():
+        if player_name in game_info['players']:
+            return "SUCCESS: Game is active."
+    return "FAILURE: No game started for this player."
+
+def check_player_state(player_name):
+    if player_name in players:
+        return players[player_name][3]  # This returns either 'free' or 'in-play'
+    return "FAILURE: Player not registered."
+
+def create_deck():
+    suits = ['C', 'D', 'H', 'S']  # Clubs, Diamonds, Hearts, Spades
+    ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
+    deck = [{"rank": rank, "suit": suit, "face_up": False} for suit in suits for rank in ranks]
+    return deck
+
+# Deal cards to players
+def deal_cards(players):
+    deck = create_deck()
+    random.shuffle(deck)
+    hands = {}
+
+    for player in players:
+        # Give 6 cards to each player
+        player_hand = [deck.pop(0) for _ in range(6)]
+        # Set 2 cards face-up randomly
+        face_up_indices = random.sample(range(6), 2)
+        for index in face_up_indices:
+            player_hand[index]["face_up"] = True
+        hands[player] = player_hand
+
+    discard_pile = [deck.pop(0)]  # First card goes to the discard pile
+    stock_pile = deck  # Remaining cards become the stock pile
+
+    return hands, discard_pile, stock_pile
+
+def end_game(game_id):
+    game = games[game_id]
+    scores = {player: calculate_score(game["player_hands"][player]) for player in game["players"]}
+    winner = min(scores, key=scores.get)  # Player with the lowest score wins
+    print(f"Game over! The winner is {winner} with {scores[winner]} points.")
 
 # Register player
 def tracker_register(player_name, player_ipv4, t_port, p_port):
@@ -46,6 +103,18 @@ def tracker_start_game(player_name, n, holes=9):
 
     game_id = f"game_{len(games) + 1}"
     games[game_id] = (player_name, selected_players, holes)
+
+    game_id = f"Game_{len(games) + 1}"
+    hands, discard_pile, stock_pile = deal_cards(selected_players)
+    games[game_id] = {
+        "dealer": player_name,
+        "players": selected_players,
+        "player_hands": hands,
+        "discard_pile": discard_pile,
+        "stock_pile": stock_pile,
+        "holes": holes
+    }
+    broadcast_to_players(game_id, f"Game {game_id} has started")
 
     return f"SUCCESS: Game {game_id} started with players {selected_players} for {holes} holes."
 
