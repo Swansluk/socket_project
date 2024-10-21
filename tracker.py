@@ -28,7 +28,28 @@ def tracker_query_players():
 
 # Start game
 def tracker_start_game(player_name, n, holes=9):
-    print("work in progress")
+        if player_name not in players or players[player_name][3] != "free":
+        return f"FAILURE: Player {player_name} is not available to start a game."
+
+    free_players = [p for p, d in players.items() if d[3] == "free" and p != player_name]
+    if len(free_players) < n:
+        return f"FAILURE: Not enough free players to start the game. Need {n}, but only {len(free_players)} available."
+
+
+    selected_players = random.sample(free_players, n)
+    selected_players.insert(0, player_name)  # Include the dealer in the list of players
+
+
+    for player in selected_players:
+        players[player] = (*players[player][:3], "in-play")
+
+
+    game_id = f"game_{len(games) + 1}"
+    games[game_id] = (player_name, selected_players, holes)
+
+    return f"SUCCESS: Game {game_id} started with players {selected_players} for {holes} holes."
+
+
 
 
 # Query games(stored as a global variable so, it can be accessed)
@@ -44,7 +65,15 @@ def tracker_query_games():
 
 # End game
 def tracker_end_game(game_id, player_name):
-    print("work in progress")
+       if game_id in games and games[game_id][0] == player_name:
+        # Mark all players in this game as "free"
+        for player in games[game_id][1]:
+            players[player] = (*players[player][:3], "free")
+
+        del games[game_id]  # Remove the game
+        return f"SUCCESS: Game {game_id} ended."
+    else:
+        return f"FAILURE: Game {game_id} not found or {player_name} is not the dealer."
 
 
 # De-register player command: `de-register player`
